@@ -1,7 +1,7 @@
 #include <cstdio>
 
 // accessed data size in byte, should be smaller than l2 cache size
-const int DATA_SIZE_IN_BYTE = (1lu << 20) * 2;
+const int DATA_SIZE_IN_BYTE = (1lu << 20) * 20;
 // number of LDG instructions
 const int N_LDG = (1lu << 20) * 512;
 
@@ -40,6 +40,8 @@ __global__ void kernel(const int *x, int *y) {
     if (sum != 0) {
         *y = sum;
     }
+    // prevent optimization by compiler
+    // asm volatile ("" : "+r"(sum));
 }
 
 int main() {
@@ -54,7 +56,7 @@ int main() {
     int *x, *y;
     cudaMalloc(&x, N_DATA * sizeof(int));
     cudaMalloc(&y, N_DATA * sizeof(int));
-    cudaMemset(x, 0, N_DATA * sizeof(int));
+    cudaMemset(x, 1, N_DATA * sizeof(int));
 
     int grid = N_LDG / UNROLL / BLOCK;
 
@@ -76,9 +78,9 @@ int main() {
     float time_ms = 0.f;
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&time_ms, start, stop);
-    double gbps = ((double)(N_LDG * sizeof(int)) / 1e9) /
+    double gbps = ((double)(N_LDG * sizeof(int)) / 1e12) /
                   ((double)time_ms / BENCH_ITER / 1e3);
-    printf("L2 cache bandwidth: %fGB/s\n", gbps);
+    printf("L2 cache bandwidth: %fTB/s\n", gbps);
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
